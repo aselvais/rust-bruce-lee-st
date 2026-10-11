@@ -1,0 +1,11 @@
+[package]
+name = "bruce-lee"
+version = "0.1.0"
+edition = "2021"
+description = "Unofficial pixel-art tribute to Datasoft's Bruce Lee — Level 1"
+license = "MIT"
+
+[dependencies]
+image = { version = "0.25", default-features = false, features = ["png"] }
+minifb = "0.27"
+rodio = { version = "0.22", default-features = false, features = ["playback"] }
