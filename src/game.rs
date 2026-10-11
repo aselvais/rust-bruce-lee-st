@@ -1,11 +1,11 @@
-//! Level 1: three fortress chambers, lanterns, the ninja, and Green Yamo.
+//! Four fortress levels. Each level is three chambers, lanterns, the ninja, and Green Yamo.
 
 use crate::gfx::{self, Assets, Frame};
 use crate::level::{self, Body, Room};
 
 const GRAVITY_DT_SCALE: f32 = 1.0;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Mode {
     Title,
     Play,
@@ -153,6 +153,7 @@ struct Floater {
 
 pub struct Game {
     pub mode: Mode,
+    pub level: usize,
     pub room: usize,
     pub time: f32,
     pub score: u32,
@@ -177,17 +178,14 @@ impl Game {
     pub fn new() -> Self {
         let mut g = Self {
             mode: Mode::Title,
+            level: 0,
             room: 0,
             time: 0.0,
             score: 0,
             lives: 5,
             show_hit: false,
-            player: Fighter::hero(level::room(0).spawn_left),
-            runs: [
-                RoomRun::new(0, 2.2, 5.0, true),
-                RoomRun::new(1, 1.6, 3.6, false),
-                RoomRun::new(2, 1.4, 3.2, false),
-            ],
+            player: Fighter::hero(level::room(0, 0).spawn_left),
+            runs: RoomRun::set(0),
             slide: None,
             stars: Vec::new(),
             particles: Vec::new(),
@@ -291,7 +289,7 @@ impl Game {
 
     fn arrive(&mut self, to: usize, dir: i32) {
         self.room = to;
-        let dest = level::room(to);
+        let dest = level::room(self.level, to);
         let (sx, sy) = if dir > 0 { dest.spawn_left } else { dest.spawn_right };
         self.player.y = sy;
         self.player.vy = 0.0;
@@ -325,7 +323,7 @@ impl Game {
         p.shock = (p.shock - dt).max(0.0);
         p.coyote = (p.coyote - dt).max(0.0);
         if p.act == Act::Dead {
-            let room = level::room(self.room);
+            let room = level::room(self.level, self.room);
             let mut body = p.body();
             p.grounded = level::step_body(&mut body, room, true, doors, hatch, dt);
             p.copy_body(&body);
@@ -352,7 +350,7 @@ impl Game {
             }
         }
 
-        let room = level::room(self.room);
+        let room = level::room(self.level, self.room);
         if p.climbing {
             p.vx = 0.0;
             p.vy = 0.0;
@@ -499,7 +497,7 @@ impl Game {
         let px = self.player.x;
         let py = self.player.y;
         let player_alive = self.player.act != Act::Dead;
-        let room = level::room(room_i);
+        let room = level::room(self.level, room_i);
         let mut spawned: Vec<Star> = Vec::new();
         for which in 0..2 {
             let e = if which == 0 { &mut self.runs[room_i].ninja } else { &mut self.runs[room_i].yamo };
@@ -658,7 +656,7 @@ impl Game {
         }
         let flags = self.lantern_flags();
         let room_i = self.room;
-        let room = level::room(room_i);
+        let room = level::room(self.level, room_i);
         let px = self.player.x;
         let py = self.player.y - self.player.h * 0.45;
         let mut got = Vec::new();
@@ -853,7 +851,7 @@ impl Game {
         if !level::elec_on(self.time) {
             return;
         }
-        let room = level::room(self.room);
+        let room = level::room(self.level, self.room);
         if self.player.act != Act::Dead && self.player.shock <= 0.0 && level::on_electric(room, self.player.x, self.player.y) {
             self.player.shock = 0.7;
             let dir = if self.player.x < 320.0 { -1 } else { 1 };
@@ -882,8 +880,7 @@ impl Game {
         let flags = self.lantern_flags();
         if self.room == 1 && level::hatch_open(&flags) {
             if self.player.x > 256.0 && self.player.x < 368.0 && self.player.y > 310.0 {
-                self.mode = Mode::Clear;
-                self.score += 2000;
+                self.descend();
                 return;
             }
         }
@@ -942,15 +939,43 @@ impl Game {
         }
     }
 
+    /// Drop through an open hatch. The last level clears the fortress.
+    /// Score, lives, and chi carry into the next level.
+    fn descend(&mut self) {
+        self.score += 2000;
+        let energy = self.player.energy;
+        if self.level + 1 >= level::LEVEL_COUNT {
+            self.mode = Mode::Clear;
+            self.cue(Sfx::Open);
+            return;
+        }
+        self.level += 1;
+        self.room = 0;
+        self.slide = None;
+        self.stars.clear();
+        self.particles.clear();
+        self.floaters.clear();
+        self.visited = [true, false, false];
+        self.runs = RoomRun::set(self.level);
+        let spawn = level::room(self.level, 0).spawn_left;
+        self.player = Fighter::hero(spawn);
+        self.player.energy = energy;
+        self.player.invuln = 1.6;
+        let name = level::fortress(self.level).name;
+        self.banner(&format!("{name} +2000"));
+        self.float_at(spawn.0, spawn.1 - 70.0, "+2000", 0xE6B43A);
+        self.cue(Sfx::Open);
+    }
+
     fn respawn(&mut self) {
-        let spawn = level::room(self.room).spawn_left;
+        let spawn = level::room(self.level, self.room).spawn_left;
         self.player = Fighter::hero(spawn);
         self.player.invuln = 1.6;
         self.player.energy = 4;
         self.dead_t = 0.0;
         let run = &mut self.runs[self.room];
-        let nsp = level::room(self.room).ninja;
-        let ysp = level::room(self.room).yamo;
+        let nsp = level::room(self.level, self.room).ninja;
+        let ysp = level::room(self.level, self.room).yamo;
         run.ninja.park(nsp, 1.2);
         run.yamo.park(ysp, 2.4);
         self.stars.clear();
@@ -1009,9 +1034,9 @@ impl Game {
             center_text(frame, "PAUSED", 160, 0xF3E6C4, 3);
         } else if self.mode == Mode::Clear {
             gfx::blend_rect(frame, 0, level::HUD, level::VIEW_W, level::VIEW_H, 0x0C0814, 150);
-            center_text(frame, "LEVEL 1 CLEAR", 120, 0xFFD060, 3);
-            center_text(frame, "THE FLOOR OF THE HALL OPENS.", 160, 0xF3E6C4, 1);
-            center_text(frame, "THE FORTRESS WAITS BELOW.", 176, 0xF3E6C4, 1);
+            center_text(frame, "FORTRESS CLEAR", 120, 0xFFD060, 3);
+            center_text(frame, "THE LAST HALL OPENS.", 160, 0xF3E6C4, 1);
+            center_text(frame, "THE FORTRESS IS YOURS.", 176, 0xF3E6C4, 1);
             let sc = format!("SCORE {}", self.score);
             center_text(frame, &sc, 204, 0xE6B43A, 2);
             if (self.time * 2.0) as i32 % 2 == 0 {
@@ -1038,8 +1063,7 @@ impl Game {
         // Sky band under the HUD. Keeps the wordmark off the vine and the fighters.
         gfx::blend_rect(frame, 0, level::HUD, level::SCREEN_W, 132, 0x100C18, 176);
         center_text(frame, "BRUCE LEE", 30, 0xFFD56A, 5);
-        center_text(frame, "LEVEL 1", 70, 0xF3E6C4, 2);
-        center_text(frame, "THE FORTRESS GATE", 90, 0xE6B43A, 1);
+        center_text(frame, "FOUR LEVELS", 70, 0xF3E6C4, 2);
         if (self.time * 2.0) as i32 % 2 == 0 {
             center_text(frame, "ENTER TO BEGIN", 106, 0xF3E6C4, 2);
         }
@@ -1053,12 +1077,14 @@ impl Game {
         let score = format!("SCORE {:>6}", self.score);
         gfx::draw_text(frame, &score, 8, 8, 0xF3E6C4, 1);
         if self.mode != Mode::Title {
-            let name = level::room(self.room).name;
+            let lv = format!("LV{}", self.level + 1);
+            gfx::draw_text(frame, &lv, 148, 8, 0xC8B89A, 1);
+            let name = level::room(self.level, self.room).name;
             let nw = gfx::text_width(name, 1);
             gfx::draw_text(frame, name, (level::SCREEN_W - nw) / 2, 8, 0xE6B43A, 1);
             let got = self.runs[self.room].lanterns.iter().filter(|t| **t).count();
             let lamps = format!("LANTERNS {got}/6");
-            gfx::draw_text(frame, &lamps, 360, 8, 0xFFD060, 1);
+            gfx::draw_text(frame, &lamps, 408, 8, 0xFFD060, 1);
             gfx::draw_text(frame, "CHI", 548, 8, 0xC8B89A, 1);
             for i in 0..4 {
                 let c = if i < self.player.energy { 0xE6B43A } else { 0x3A3040 };
@@ -1070,13 +1096,13 @@ impl Game {
     }
 
     fn draw_room(&self, assets: &Assets, frame: &mut Frame, index: usize, ox: i32, oy: i32, with_player: bool) {
-        let room = level::room(index);
+        let room = level::room(self.level, index);
         let run = &self.runs[index];
         let flags = self.lantern_flags();
         let hatch = level::hatch_open(&flags);
         let cam_y = level::HUD + oy;
-        // Background.
-        blit_bg(frame, &assets.bg[index], ox, cam_y);
+        // Background. Later levels reuse the three paintings with a tint.
+        blit_bg(frame, &assets.bg[index], ox, cam_y, level::fortress(self.level).tint);
         // Tiles.
         for r in 0..level::ROWS {
             for c in 0..level::COLS {
@@ -1310,8 +1336,32 @@ fn shadow(frame: &mut Frame, x: i32, y: i32, half: i32) {
     }
 }
 
-fn blit_bg(frame: &mut Frame, img: &gfx::Image, ox: i32, oy: i32) {
-    gfx::blit(frame, img, 0, 0, img.w, img.h, ox, oy, false, false);
+fn blit_bg(frame: &mut Frame, img: &gfx::Image, ox: i32, oy: i32, tint: (u8, u8, u8)) {
+    if tint == (255, 255, 255) {
+        gfx::blit(frame, img, 0, 0, img.w, img.h, ox, oy, false, false);
+        return;
+    }
+    let (tr, tg, tb) = tint;
+    for y in 0..img.h {
+        let dy = oy + y;
+        if dy < 0 || dy >= frame.h {
+            continue;
+        }
+        for x in 0..img.w {
+            let dx = ox + x;
+            if dx < 0 || dx >= frame.w {
+                continue;
+            }
+            let i = ((y * img.w + x) * 4) as usize;
+            if img.px[i + 3] < 16 {
+                continue;
+            }
+            let r = img.px[i] as u32 * tr as u32 / 255;
+            let g = img.px[i + 1] as u32 * tg as u32 / 255;
+            let b = img.px[i + 2] as u32 * tb as u32 / 255;
+            frame.px[(dy * frame.w + dx) as usize] = (r << 16) | (g << 8) | b;
+        }
+    }
 }
 
 fn center_text(frame: &mut Frame, s: &str, y: i32, color: u32, scale: i32) {
@@ -1514,8 +1564,8 @@ impl Enemy {
 }
 
 impl RoomRun {
-    fn new(index: usize, ninja_delay: f32, yamo_delay: f32, woke: bool) -> Self {
-        let room = level::room(index);
+    fn new(level: usize, index: usize, ninja_delay: f32, yamo_delay: f32, woke: bool) -> Self {
+        let room = level::room(level, index);
         Self {
             lanterns: [false; 6],
             ninja: Enemy::new(EKind::Ninja, room.ninja, ninja_delay),
@@ -1523,9 +1573,31 @@ impl RoomRun {
             woke,
         }
     }
+
+    fn set(level: usize) -> [RoomRun; 3] {
+        [
+            RoomRun::new(level, 0, 2.2, 5.0, true),
+            RoomRun::new(level, 1, 1.6, 3.6, false),
+            RoomRun::new(level, 2, 1.4, 3.2, false),
+        ]
+    }
 }
 
 impl Game {
+    fn pose_level(&mut self, level: usize) {
+        self.mode = Mode::Play;
+        self.level = level;
+        self.room = 0;
+        self.runs = RoomRun::set(level);
+        self.runs[0].woke = true;
+        let spawn = level::room(level, 0).spawn_left;
+        self.player.x = spawn.0 + 48.0;
+        self.player.y = spawn.1;
+        self.player.act = Act::Idle;
+        self.hint = 0.0;
+        self.time = 0.45;
+    }
+
     /// Pose the scene for stills. Does not run the simulation.
     pub fn stage(&mut self, scene: &str) {
         *self = Self::new();
@@ -1593,16 +1665,63 @@ impl Game {
                 self.runs[2].yamo.y = 304.0;
                 self.runs[2].yamo.facing = -1;
             }
+            "keep" => self.pose_level(1),
+            "tower" => self.pose_level(2),
+            "vault" => self.pose_level(3),
             "clear" => {
                 self.mode = Mode::Clear;
+                self.level = level::LEVEL_COUNT - 1;
                 self.room = 1;
+                self.runs = RoomRun::set(self.level);
                 self.time = 1.2;
                 self.score = 8750;
                 for run in &mut self.runs {
                     run.lanterns = [true; 6];
+                    run.woke = true;
                 }
             }
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hatch_advances_until_the_last_level() {
+        let mut g = Game::new();
+        g.mode = Mode::Play;
+        g.room = 1;
+        g.player.x = 300.0;
+        g.player.y = 330.0;
+        g.player.energy = 2;
+        g.score = 100;
+        g.lives = 3;
+        for run in &mut g.runs {
+            run.lanterns = [true; 6];
+        }
+        g.try_exit();
+        assert_eq!(g.level, 1);
+        assert_eq!(g.room, 0);
+        assert_eq!(g.mode, Mode::Play);
+        assert_eq!(g.score, 2100);
+        assert_eq!(g.lives, 3);
+        assert_eq!(g.player.energy, 2);
+        assert!(g.runs.iter().all(|r| r.lanterns.iter().all(|t| !*t)));
+
+        g.level = level::LEVEL_COUNT - 1;
+        g.room = 1;
+        g.player.x = 300.0;
+        g.player.y = 330.0;
+        for run in &mut g.runs {
+            run.lanterns = [true; 6];
+        }
+        let score = g.score;
+        g.try_exit();
+        assert_eq!(g.mode, Mode::Clear);
+        assert_eq!(g.level, level::LEVEL_COUNT - 1);
+        assert_eq!(g.score, score + 2000);
     }
 }

@@ -18,7 +18,7 @@ fn main() {
     }
     let scale = if args.iter().any(|a| a == "--1") { Scale::X1 } else { Scale::X2 };
     let mut window = Window::new(
-        "Bruce Lee — Level 1",
+        "Bruce Lee",
         level::SCREEN_W as usize,
         level::SCREEN_H as usize,
         WindowOptions {
@@ -82,7 +82,7 @@ fn read_input(window: &Window) -> Input {
 fn render_shots(assets: &Assets) {
     std::fs::create_dir_all("shots").expect("shots dir");
     let mut frame = Frame::new(level::SCREEN_W, level::SCREEN_H);
-    let scenes = ["title", "court", "fight", "hall", "gallery", "clear"];
+    let scenes = ["title", "court", "fight", "hall", "gallery", "clear", "keep", "tower", "vault"];
     let names = [
         "01_title.png",
         "02_gate_court.png",
@@ -90,6 +90,9 @@ fn render_shots(assets: &Assets) {
         "04_middle_hall.png",
         "05_east_gallery.png",
         "06_level_clear.png",
+        "07_inner_keep.png",
+        "08_bell_tower.png",
+        "09_throne_vault.png",
     ];
     for (scene, name) in scenes.iter().zip(names.iter()) {
         let mut game = Game::new();

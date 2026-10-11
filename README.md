@@ -1,8 +1,34 @@
-# Bruce Lee — Level 1
+# Bruce Lee
 
-An unofficial pixel-art tribute to Datasoft's 1984 *Bruce Lee*. This build is Level 1 only: the three opening chambers of the fortress. The sprites, rooms, and code are original. It is not affiliated with the Bruce Lee estate or with Datasoft.
+An unofficial pixel-art tribute to Datasoft's 1984 *Bruce Lee*. This build is four fortress levels, three chambers each. The sprites, rooms, and code are original. It is not affiliated with the Bruce Lee estate or with Datasoft.
 
-The game is a Rust binary. Art is compiled into the executable, so a release build is one file. There is no installer and no audio.
+The game is a Rust binary. Art and synthesized sound are compiled into the executable, so a release build is one file. There is no installer.
+
+## Screenshots
+
+Title screen.
+
+![Title screen, with the prompt to begin four fortress levels](shots/01_title.png)
+
+A flying kick in the Gate Court. The ninja throws a shuriken. Green Yamo closes in from the right.
+
+![Flying kick in the Gate Court as the ninja slashes and a shuriken crosses the court](shots/03_fight.png)
+
+The East Gallery. The middle of the floor is electric. Cross while it is dark, or stay on the ladders and the bridge.
+
+![East Gallery with the electric floor lit and lanterns still to collect](shots/05_east_gallery.png)
+
+The Bell Shaft, on the third level. Platforms alternate off a vine that runs the height of the room.
+
+![Bell Shaft, with staggered platforms and a full-height vine](shots/08_bell_tower.png)
+
+The same command that plays the game can write every still, including the other levels:
+
+```
+cargo run -- --shots
+```
+
+That fills `shots/` and does not open a window.
 
 ## Requirements
 
@@ -84,7 +110,7 @@ The same flags work on the release binary:
 ./target/release/bruce-lee --shots
 ```
 
-`--shots` writes the six stills in `shots/` and does not open a window. Run it from the project folder so `shots/` is created there.
+`--shots` writes the stills in `shots/` and does not open a window. Run it from the project folder so `shots/` is created there.
 
 The binary matches the Mac you compiled on. On this machine that is Apple silicon (`arm64`). An Intel Mac needs its own `cargo build --release` on that Mac. To ship one file that runs on both, build each target and join them:
 
@@ -126,13 +152,16 @@ Copy `bruce-lee.exe` anywhere. It does not need `assets\`, a DLL folder, or the 
 
 This repository is developed on macOS. The Windows executable is produced by the command above on a Windows PC. Both releases are the same source and the same embedded art.
 
-## Level 1
+## The fortress
 
-Three single-screen chambers. Walk through an open door and the next room slides in.
+Four levels. Each level is three single-screen chambers and 18 lanterns. Walk through an open door and the next room slides in. The same door rule is used on every level: the first chamber guards the east door, the middle chamber guards the east door and holds the floor hatch, and the last chamber is a dead end.
 
-1. **Gate Court.** Guardian statue, center vine, six lanterns. You start at the lower left. The east door opens when every lantern in this room is taken.
-2. **Middle Hall.** Ladders on both sides, a center vine, six lanterns. The left door is open once the court is clear. The right door opens when this hall is clear. The floor hatch in the middle opens only after all 18 lanterns are taken. Drop through it to finish the level.
-3. **East Gallery.** High bridge, side ladders, six lanterns, and a timed electric floor. There is no door past this room. Take the lanterns, return to the hall, and use the hatch.
+Clear every lantern in the level and the hatch in the middle chamber opens. Drop through it. On the first three levels that starts the next level: score, lives, and chi carry over, and you arrive at the lower left of the new gate. The fourth hatch clears the fortress.
+
+1. **The Fortress Gate.** Gate Court, Middle Hall, East Gallery. A guardian statue and a center vine, then side ladders, then a high bridge over a timed electric floor.
+2. **The Inner Keep.** West Stair, Keep Hall, East Cistern. A climbing stair and a side ladder, a stack of balconies, then a cistern whose middle floor is electric.
+3. **The Bell Tower.** Bell Shaft, Tower Hall, Bell Walk. Platforms alternate off a tall vine, the hall is higher on the right, and the walk has two electric gaps with a safe island between them.
+4. **The Throne Vault.** Vault Stairs, Throne Hall, Throne Walk. A rising stair beside a vine, a high hall over the last hatch, then a double electric moat. The hatch here ends the run.
 
 The electric floor runs on a 2.45 second cycle. It is dark, then it flashes a warning, then it is live. Cross while it is dark, or stay on the ladders and the upper platforms. Standing on it while it is live costs one pip of chi.
 
@@ -151,9 +180,9 @@ You have four chi pips and five lives. When chi reaches zero you lose a life and
 | Ninja defeated | the hit, plus 200 |
 | Green Yamo defeated | the hit, plus 450 |
 | First visit to a new chamber | 2000 |
-| Level clear | 2000 |
+| Level clear, including the final hatch | 2000 |
 
-The HUD shows the score, the chamber name, lanterns taken in the current room, chi, and lives remaining.
+The HUD shows the score, the level number, the chamber name, lanterns taken in the current room, chi, and lives remaining. The 2000 for a level clear is paid when you drop through the hatch. The first room of a level is not scored as a new chamber.
 
 ## Project layout
 
@@ -162,7 +191,7 @@ Cargo.toml          package bruce-lee, edition 2021
 Cargo.lock          locked dependency versions
 src/main.rs         window loop, keys, screenshot writer
 src/game.rs         rooms, combat, score, title and clear screens
-src/level.rs        maps, physics, doors, hatch, electric floor
+src/level.rs        four levels, physics, doors, hatch, electric floor
 src/gfx.rs          framebuffer, sprite blit, pixel font
 assets/             PNG sprites and the three room backgrounds
 tools/gen_assets.py redraws the PNGs in assets/
@@ -187,7 +216,7 @@ cargo build
 cargo test
 ```
 
-The tests check that a fall lands on the court floor, that a jump clears a one-way ledge, and that every lantern can be reached from the left spawn.
+The tests check that a fall lands on the court floor, that a jump clears a one-way ledge, that every lantern in all four levels can be reached from the left spawn, that each hall hatch is solid until the lanterns are taken, and that the synthesized music and effects stay in an audible range.
 
 ## Dependencies
 
@@ -195,5 +224,6 @@ The tests check that a fall lands on the court floor, that a jump clears a one-w
 | --- | --- |
 | `minifb` 0.27 | Window, keyboard, 60 fps |
 | `image` 0.25 | PNG decode for embedded art, and writing `--shots` |
+| `rodio` 0.22 | Playback of the synthesized music and effects |
 
 Both are fetched by Cargo. No system libraries need a separate install on macOS or on Windows with the default Rustup toolchain.

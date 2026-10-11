@@ -2,7 +2,7 @@
 name = "bruce-lee"
 version = "0.1.0"
 edition = "2021"
-description = "Unofficial pixel-art tribute to Datasoft's Bruce Lee — Level 1"
+description = "Unofficial pixel-art tribute to Datasoft's Bruce Lee"
 license = "MIT"
 
 [dependencies]
