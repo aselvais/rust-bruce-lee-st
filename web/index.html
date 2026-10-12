@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bruce Lee</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #110e0c;
+      --ink: #f3e6cf;
+      --dim: #b4a48c;
+      --line: #6b4e32;
+      --panel: #231910;
+      --button: #3a2a1c;
+      --button-down: #6a4524;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 12px 28px;
+    }
+
+    header { text-align: center; }
+
+    h1 {
+      margin: 0;
+      font-weight: 600;
+      font-size: 28px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    p {
+      margin: 6px 0 0;
+      color: var(--dim);
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    #status { min-height: 1.5em; }
+
+    #screen {
+      display: block;
+      background: #000;
+      border: 2px solid var(--line);
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      touch-action: none;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .pad {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      width: min(920px, 100%);
+      touch-action: none;
+      user-select: none;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: var(--button);
+      color: var(--ink);
+      font: 13px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      letter-spacing: 0.04em;
+      padding: 12px 14px;
+      min-width: 76px;
+      border-radius: 2px;
+    }
+
+    button:active, button.down {
+      background: var(--button-down);
+    }
+
+    footer {
+      max-width: 640px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Bruce Lee</h1>
+    <p id="status">Loading the game…</p>
+  </header>
+  <canvas id="screen" width="640" height="360"></canvas>
+  <div class="pad" id="pad">
+    <button type="button" data-pad="left">Left</button>
+    <button type="button" data-pad="right">Right</button>
+    <button type="button" data-pad="up">Up</button>
+    <button type="button" data-pad="down">Down</button>
+    <button type="button" data-pad="jump">Jump</button>
+    <button type="button" data-pad="attack">Punch</button>
+    <button type="button" data-pad="start">Enter</button>
+    <button type="button" data-pad="pause">Pause</button>
+  </div>
+  <footer>
+    <p>Arrows or A D to run. W or Up climbs, and jumps off a ladder. Space jumps. Down ducks. Z X J K punch or flying-kick. P pauses. M mutes. Enter starts.</p>
+  </footer>
+  <script type="module" src="play.js"></script>
+</body>
+</html>

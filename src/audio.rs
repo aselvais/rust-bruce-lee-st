@@ -1,13 +1,61 @@
 //! Original music and effects. Synthesized at startup, not taken from the 1984 game.
+//!
+//! Playback on the desktop goes through `rodio`. The browser build takes the same
+//! samples from [`clips`] and plays them with the Web Audio API.
 
-use crate::game::{Mode, Sfx};
+use crate::game::Sfx;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::game::Mode;
+
+#[cfg(not(target_arch = "wasm32"))]
 use rodio::buffer::SamplesBuffer;
+#[cfg(not(target_arch = "wasm32"))]
 use rodio::source::Source;
+#[cfg(not(target_arch = "wasm32"))]
 use rodio::{nz, DeviceSinkBuilder, MixerDeviceSink, Player};
+#[cfg(not(target_arch = "wasm32"))]
 use std::num::NonZeroU32;
 
-const SR: u32 = 22_050;
+pub const SAMPLE_RATE: u32 = 22_050;
+const SR: u32 = SAMPLE_RATE;
 
+/// Effect index into [`ClipSet::fx`]. Desktop and web playback share this order.
+pub fn sfx_index(cue: Sfx) -> usize {
+    match cue {
+        Sfx::Jump => 0,
+        Sfx::Punch => 1,
+        Sfx::Kick => 2,
+        Sfx::Lantern => 3,
+        Sfx::Hit => 4,
+        Sfx::Hurt => 5,
+        Sfx::Ko => 6,
+        Sfx::Zap => 7,
+        Sfx::Open => 8,
+        Sfx::Throw => 9,
+    }
+}
+
+pub struct ClipSet {
+    pub title: Vec<f32>,
+    pub level: Vec<f32>,
+    pub clear: Vec<f32>,
+    pub clear_bed: Vec<f32>,
+    pub over: Vec<f32>,
+    pub fx: [Vec<f32>; 10],
+}
+
+pub fn clips() -> ClipSet {
+    ClipSet {
+        title: tune(78.0, &TITLE, Wave::Tri),
+        level: tune(108.0, &LEVEL, Wave::Pulse),
+        clear: fanfare(),
+        clear_bed: tune(72.0, &CLEAR_BED, Wave::Tri),
+        over: sting(),
+        fx: [jump(), punch(), kick(), lantern(), hit(), hurt(), ko(), zap(), open(), throw()],
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Track {
     Title,
@@ -16,6 +64,7 @@ enum Track {
     Over,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub struct Audio {
     sink: MixerDeviceSink,
     music: Player,
@@ -30,35 +79,26 @@ pub struct Audio {
     fx: [Vec<f32>; 10],
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Audio {
     pub fn open() -> Option<Self> {
         let mut sink = DeviceSinkBuilder::open_default_sink().ok()?;
         sink.log_on_drop(false);
         let music = Player::connect_new(sink.mixer());
         music.set_volume(0.85);
+        let clips = clips();
         Some(Self {
             sink,
             music,
             track: None,
             paused: false,
             muted: false,
-            level: tune(108.0, &LEVEL, Wave::Pulse),
-            title: tune(78.0, &TITLE, Wave::Tri),
-            clear: fanfare(),
-            clear_bed: tune(72.0, &CLEAR_BED, Wave::Tri),
-            over: sting(),
-            fx: [
-                jump(),
-                punch(),
-                kick(),
-                lantern(),
-                hit(),
-                hurt(),
-                ko(),
-                zap(),
-                open(),
-                throw(),
-            ],
+            level: clips.level,
+            title: clips.title,
+            clear: clips.clear,
+            clear_bed: clips.clear_bed,
+            over: clips.over,
+            fx: clips.fx,
         })
     }
 
@@ -106,26 +146,16 @@ impl Audio {
     }
 
     fn play(&self, cue: Sfx) {
-        let i = match cue {
-            Sfx::Jump => 0,
-            Sfx::Punch => 1,
-            Sfx::Kick => 2,
-            Sfx::Lantern => 3,
-            Sfx::Hit => 4,
-            Sfx::Hurt => 5,
-            Sfx::Ko => 6,
-            Sfx::Zap => 7,
-            Sfx::Open => 8,
-            Sfx::Throw => 9,
-        };
-        self.sink.mixer().add(once(&self.fx[i]));
+        self.sink.mixer().add(once(&self.fx[sfx_index(cue)]));
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn once(data: &[f32]) -> SamplesBuffer {
     SamplesBuffer::new(nz!(1), NonZeroU32::new(SR).expect("sample rate"), data.to_vec())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn looped(data: &[f32]) -> impl Source<Item = f32> + Send + 'static {
     once(data).repeat_infinite()
 }
@@ -410,5 +440,16 @@ mod tests {
         let buf = tune(108.0, &LEVEL, Wave::Pulse);
         let secs = buf.len() as f32 / SR as f32;
         assert!(secs > 3.0 && secs < 12.0, "{secs}");
+    }
+
+    #[test]
+    fn clips_match_the_shared_effect_order() {
+        let set = clips();
+        assert_eq!(sfx_index(Sfx::Throw), 9);
+        assert_eq!(set.fx.len(), 10);
+        for buf in [&set.title, &set.level, &set.clear, &set.clear_bed, &set.over] {
+            let peak = buf.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
+            assert!(peak > 0.2 && peak <= 1.0, "peak {peak}");
+        }
     }
 }

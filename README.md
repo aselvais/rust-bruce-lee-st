@@ -2,7 +2,16 @@
 
 An unofficial pixel-art tribute to Datasoft's 1984 *Bruce Lee*. This build is four fortress levels, three chambers each. The sprites, rooms, and code are original. It is not affiliated with the Bruce Lee estate or with Datasoft.
 
-The game is a Rust binary. Art and synthesized sound are compiled into the executable, so a release build is one file. There is no installer.
+The desktop game is a Rust binary. Art and synthesized sound are compiled into the executable, so a release build is one file. There is no installer. The same source compiles to WebAssembly for the page in `web/`.
+
+# The Original on C64
+
+Best game ever ! :) 
+
+![](docs/BruceLee_ataricover.jpg)
+
+![](docs/bruce_lee_03.png)
+
 
 ## Screenshots
 
@@ -50,7 +59,8 @@ That fills `shots/` and does not open a window.
 ## Requirements
 
 - [Rust](https://rustup.rs/) with `cargo`. This project was built with Rust 1.99 (edition 2021). Any recent stable toolchain is enough.
-- A display. The game uses a normal desktop window (`minifb`).
+- A display, for the desktop window (`minifb`).
+- [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/), for the browser build, and the `wasm32-unknown-unknown` target (`rustup target add wasm32-unknown-unknown`).
 
 Python is only needed if you regenerate the pixel art. It is not needed to play or to build a release.
 
@@ -169,6 +179,42 @@ Copy `bruce-lee.exe` anywhere. It does not need `assets\`, a DLL folder, or the 
 
 This repository is developed on macOS. The Windows executable is produced by the command above on a Windows PC. Both releases are the same source and the same embedded art.
 
+### Web
+
+Rust compiles this game to WebAssembly (`wasm32-unknown-unknown`). The page in `web/` draws the same 640×360 framebuffer into a canvas and scales it with nearest-neighbor pixels. Music and effects are the same synthesized clips, played by the Web Audio API. The pictures stay inside the wasm module.
+
+Serve the `web` folder over HTTP. The page fetches the wasm module, which browsers allow from a web server.
+
+One-time setup:
+
+```
+rustup target add wasm32-unknown-unknown
+cargo install wasm-pack
+```
+
+Homebrew works on a Mac: `brew install wasm-pack`.
+
+Build the release:
+
+```
+./tools/build_web.sh
+```
+
+On Windows, from this folder:
+
+```
+rustup target add wasm32-unknown-unknown
+wasm-pack build --target web --release --out-dir web/pkg
+```
+
+The build writes `web/pkg/bruce_lee.js` and `web/pkg/bruce_lee_bg.wasm` next to `web/index.html` and `web/play.js`. Serve that folder:
+
+```
+python3 -m http.server -d web 8080
+```
+
+Open <http://127.0.0.1:8080>. Click the page or press a key so the browser allows sound. Enter starts the game. The keys match the table above. The buttons under the picture send the same actions as the keys, so the page can be played without a keyboard.
+
 ## The fortress
 
 Four levels. Each level is three single-screen chambers and 18 lanterns. Walk through an open door and the next room slides in. The same door rule is used on every level: the first chamber guards the east door, the middle chamber guards the east door and holds the floor hatch, and the last chamber is a dead end.
@@ -206,12 +252,19 @@ The HUD shows the score, the level number, the chamber name, lanterns taken in t
 ```
 Cargo.toml          package bruce-lee, edition 2021
 Cargo.lock          locked dependency versions
-src/main.rs         window loop, keys, screenshot writer
+src/lib.rs          shared game, used by the desktop binary and the web build
+src/main.rs         desktop window loop, keys, screenshot writer
+src/web.rs          wasm entry: framebuffer, input, audio clips
 src/game.rs         rooms, combat, score, title and clear screens
 src/level.rs        four levels, physics, doors, hatch, electric floor
 src/gfx.rs          framebuffer, sprite blit, pixel font
+src/audio.rs        synthesized music and effects
+web/index.html      browser page
+web/play.js         canvas, keys, buttons, Web Audio
+web/pkg/            release wasm from tools/build_web.sh
 assets/             PNG sprites and the three room backgrounds
 tools/gen_assets.py redraws the PNGs in assets/
+tools/build_web.sh  builds the browser release
 shots/              stills from --shots
 LICENSE             MIT, Copyright (c) 2026 Arnaud Selvais
 ```
@@ -239,8 +292,10 @@ The tests check that a fall lands on the court floor, that a jump clears a one-w
 
 | Crate | Use |
 | --- | --- |
-| `minifb` 0.27 | Window, keyboard, 60 fps |
+| `minifb` 0.27 | Desktop window, keyboard, 60 fps |
 | `image` 0.25 | PNG decode for embedded art, and writing `--shots` |
-| `rodio` 0.22 | Playback of the synthesized music and effects |
+| `rodio` 0.22 | Desktop playback of the synthesized music and effects |
+| `wasm-bindgen` 0.2 | Browser build only. Exports the game to the page |
+| `console_error_panic_hook` 0.1 | Browser build only. Prints Rust panics in the developer console |
 
-Both are fetched by Cargo. No system libraries need a separate install on macOS or on Windows with the default Rustup toolchain.
+Cargo fetches them. `minifb` and `rodio` are compiled for the desktop binary and left out of the wasm build. No system libraries need a separate install on macOS or on Windows with the default Rustup toolchain. The browser build also needs `wasm-pack`, which runs the matching `wasm-bindgen` CLI.

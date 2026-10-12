@@ -1,11 +1,7 @@
-mod audio;
-mod game;
-mod gfx;
-mod level;
-
-use audio::Audio;
-use game::{Game, Input};
-use gfx::{Assets, Frame};
+use bruce_lee::audio::Audio;
+use bruce_lee::game::{Game, Input};
+use bruce_lee::gfx::{Assets, Frame};
+use bruce_lee::level;
 use minifb::{Key, KeyRepeat, Scale, ScaleMode, Window, WindowOptions};
 use std::time::Instant;
 

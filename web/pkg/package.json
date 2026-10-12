@@ -1,0 +1,17 @@
+{
+  "name": "bruce-lee",
+  "type": "module",
+  "description": "Unofficial pixel-art tribute to Datasoft's Bruce Lee",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "bruce_lee_bg.wasm",
+    "bruce_lee.js",
+    "bruce_lee.d.ts"
+  ],
+  "main": "bruce_lee.js",
+  "types": "bruce_lee.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
