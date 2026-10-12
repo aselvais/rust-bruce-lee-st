@@ -48,6 +48,9 @@ The same command that plays the game can write every still, including the other 
 ![](assets/yamo.jpg)
 
 
+# Early DEMO
+
+Very early buggy version here: https://rust-bruce-lee-st.web.app/
 
 
 ```
