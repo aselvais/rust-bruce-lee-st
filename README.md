@@ -24,6 +24,23 @@ The Bell Shaft, on the third level. Platforms alternate off a vine that runs the
 
 The same command that plays the game can write every still, including the other levels:
 
+## New sprite sheets to be integrated
+
+### Bruce Lee
+
+![](assets/hero.jpg)
+
+### Ninja
+
+![](assets/ninja.jpg)
+
+### Sumo Fighter
+
+![](assets/yamo.jpg)
+
+
+
+
 ```
 cargo run -- --shots
 ```
